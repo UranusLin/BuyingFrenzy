@@ -29,6 +29,8 @@ Builds [docker](https://www.docker.com) images and run in [docker-compose](https
 
 DB model
 
+![image](https://github.com/UranusLin/BuyingFrenzy/blob/master/db_Architecture.png)
+
 API document
 
 
