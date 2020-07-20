@@ -1,0 +1,14 @@
+{
+  "database": "postgres",
+  "user": "postgres",
+  "password": "passw0rd",
+  "host": "127.0.0.1",
+  "port": "5432",
+  "API_PORT": "5001",
+  "DB_TABLE": ["Restaurant", "Menu", "OpenHours", "PurchaseHistory", "users"],
+  "Restaurant_CREATE": "CREATE TABLE IF NOT EXISTS Restaurant (ID SERIAL PRIMARY KEY, restaurantName TEXT NOT NULL, cashBalance NUMERIC NOT NULL)",
+  "Menu_CREATE": "CREATE TABLE IF NOT EXISTS Menu (ID SERIAL PRIMARY KEY, dishName TEXT NOT NULL, price NUMERIC NOT NULL, restaurant_id INT NOT NULL)",
+  "OpenHours_CREATE": "CREATE TABLE IF NOT EXISTS OpenHours (ID SERIAL PRIMARY KEY, week TEXT NOT NULL, open TEXT NOT NULL, close TEXT NOT NULL, restaurant_id INT NOT NULL)",
+  "users_CREATE": "CREATE TABLE IF NOT EXISTS users (ID INT PRIMARY KEY , name TEXT NOT NULL, cashBalance NUMERIC NOT NULL)",
+  "PurchaseHistory_CREATE": "CREATE TABLE IF NOT EXISTS PurchaseHistory (ID SERIAL PRIMARY KEY, menu_id INT NOT NULL, restaurant_id INT NOT NULL, transactionAmount NUMERIC NOT NULL, transactionDate TEXT NOT NULL, user_id INT NOT NULL)"
+}
