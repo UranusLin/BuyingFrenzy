@@ -8,6 +8,9 @@ from dateutil import parser
 from src import log_init, db_util
 import decimal
 
+from src.utils import query_db
+
+
 class MyJSONEncoder(flask.json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, decimal.Decimal):
@@ -29,6 +32,7 @@ weekend_list = ['Sun', 'Mon', 'Tues', 'Weds', 'Thurs', 'Fri', 'Sat']
 @app.route('/restaurant', methods=['OPTIONS'])
 def restaurant_count():
     conn = None
+    query_data = None
     log = logging.getLogger('restaurant_count')
     try:
         statement = 'select count(*) from restaurant'
@@ -101,23 +105,8 @@ def get_restaurant():
                 error_msg['message'] = 'wrong date'
                 error_msg['code'] = '99'
                 return jsonify(error_msg)
-        if limit and offset:
-            statement = statement + ' offset ' + offset + ' limit ' + limit
-        log.info('statement:' + statement)
-        conn = db_util.db_get_conn(config, log)
-        if query_data:
-            cur = db_util.db_execute(conn, statement, log, query_data)
-        else:
-            cur = db_util.db_execute(conn, statement, log)
-        rows = list(cur.fetchall())
-        data = []
-        for row in rows:
-            row = dict(row)
-            if row.get('open'):
-                row['open'] = datetime.strftime(parser.parse(str(row.get('open'))), '%H:%M %p')
-            if row.get('close'):
-                row['close'] = datetime.strftime(parser.parse(str(row.get('close'))), '%H:%M %p')
-            data.append(row)
+
+        data = query_db(limit, offset, statement, log, config, query_data)
         log.info('data:' + str(data))
         return jsonify({'data': data})
     except:
@@ -131,6 +120,7 @@ def get_restaurant():
 def get_restaurant_hour():
     try:
         conn = None
+        query_data = None
         log = logging.getLogger('get_restaurant_hour')
         query_type = request.args.get('query_type', default=None)
         date_type = request.args.get('date_type', default=None)
@@ -188,9 +178,10 @@ def get_restaurant_hour():
 def get_dishes_price():
     try:
         conn = None
+        query_data = None
         log = logging.getLogger('get_dishes_price')
-        price_max = request.args.get('max', default=None)
-        price_min = request.args.get('min', default=None)
+        price_max = request.args.get('price_max', default=None)
+        price_min = request.args.get('price_min', default=None)
         sort = request.args.get('sort', default=None)
         sort_type = request.args.get('sort_type', default=None)
         offset = request.args.get('offset', default=None)
@@ -210,7 +201,7 @@ def get_dishes_price():
             error_msg['code'] = '103'
             error_msg['message'] = 'wrong params'
             return jsonify({'data': error_msg})
-        statement = 'select * from menu where price '
+        statement = 'select menu.dishname, menu.price, restaurant.restaurantname from menu join restaurant on (restaurant.id = menu.restaurant_id) where price '
         if price_max and price_min:
             statement = statement + ' between %s and %s'
             query_data = (price_min, price_max)
@@ -224,19 +215,7 @@ def get_dishes_price():
             statement = statement + ' ORDER BY price ' + sort_type
         else:
             statement = statement + ' ORDER BY dishname ' + sort_type
-        if limit and offset:
-            statement = statement + ' offset ' + offset + ' limit ' + limit
-        log.info('statement:' + statement)
-        conn = db_util.db_get_conn(config, log)
-        if query_data:
-            cur = db_util.db_execute(conn, statement, log, query_data)
-        else:
-            cur = db_util.db_execute(conn, statement, log)
-        rows = list(cur.fetchall())
-        data = []
-        for row in rows:
-            row = dict(row)
-            data.append(row)
+        data = query_db(limit, offset, statement, log, config, query_data)
         log.info('data:' + str(data))
         return jsonify({'data': data})
     except:
@@ -245,6 +224,70 @@ def get_dishes_price():
     finally:
         if conn:
             conn.close()
+
+@app.route('/dishes/amount', methods=['GET'])
+def get_dishes_amount():
+    try:
+        conn = None
+        query_data = None
+        log = logging.getLogger('get_dishes_amount')
+        price_max = request.args.get('price_max', default=None)
+        price_min = request.args.get('price_min', default=None)
+        dishes_max = request.args.get('dishes_max', default=None)
+        dishes_min = request.args.get('dishes_min', default=None)
+        offset = request.args.get('offset', default=None)
+        limit = request.args.get('limit', default=None)
+        wrong = False
+        if not dishes_max and not dishes_min:
+                wrong = True
+        if dishes_max and dishes_min:
+            if (int(dishes_max) < int(dishes_min)):
+                wrong = True
+        if wrong:
+            log.error('wrong params')
+            error_msg['code'] = '103'
+            error_msg['message'] = 'wrong params'
+            return jsonify({'data': error_msg})
+        statement = 'select restaurant.restaurantname, count(restaurant_id) from menu join restaurant on (restaurant.id = menu.restaurant_id) '
+
+        if price_max and price_min:
+            statement = statement + '  where menu.price between %s and %s'
+            query_data = (price_min, price_max)
+        elif price_max:
+            statement = statement + ' where menu.price <= %s'
+            query_data = (price_max,)
+        elif price_min:
+            query_data = (price_min,)
+
+        statement = statement + ' group by menu.restaurant_id,restaurant.restaurantname   having count(menu.restaurant_id)  '
+        if dishes_max and dishes_min:
+            statement = statement + ' between %s and %s'
+            l = list(query_data)
+            l.append(dishes_min)
+            l.append(dishes_max)
+            query_data = tuple(l)
+        elif dishes_max:
+            statement = statement + ' <= %s'
+            l = list(query_data)
+            l.append(dishes_max)
+            query_data = tuple(l)
+        else:
+            statement = statement + ' >= %s'
+            l = list(query_data)
+            l.append(dishes_max)
+            query_data = tuple(l)
+
+        data = query_db(limit, offset, statement, log, config, query_data)
+        log.info('data:' + str(data))
+        return jsonify({'data': data})
+    except:
+        log.info("Catch an exception.", exc_info=True)
+        return jsonify(error_msg)
+    finally:
+        if conn:
+            conn.close()
+
+#select restaurant.restaurantname, count(restaurant_id) from menu join restaurant on (restaurant.id = menu.restaurant_id)  group by menu.restaurant_id,restaurant.restaurantname   having count(menu.restaurant_id) > 10
 
 if __name__ == '__main__':
         # get all route endpoints

@@ -42,12 +42,14 @@ Params:
     time: time ex. 12:00, 14:00, 08:00 PM, 8AM etc... support 
 
 List all restaurants that are open on a day of the week, at a certain time
+GET /restaurant
 Params:
     offset: int
     limit:int
     week: 'Sun', 'Mon', 'Tues', 'Weds', 'Thurs', 'Fri', 'Sat' 
     time: time ex. 12:00, 14:00, 08:00 PM, 8AM etc... support 
 
+List all restaurants that are open for more or less than x hours per day or week
 GET /restaurant/hour
 get open time more or less per week or day
 ps. just realize day and have little bug
@@ -64,16 +66,40 @@ get price range in menu
 Params:
     offset: int
     limit:int
-    max: int max price
-    min: int min price 
+    price_max: int max price
+    price_min: int min price 
     sort: int 1 is sort by price 2 is sort by name
+
+List all restaurants that have more or less than x number of dishes
+GET /dishes/amount
+get amount from restaurant dishes amount
+Params:
+    offset: int
+    limit:int
+    dishes_max: int max dishes
+    dishes_min: int min dishes 
+
+List all restaurants that have more or less than x number of dishes within a price range
+GET /dishes/amount
+get amount from restaurant dishes amount
+Params:
+    offset: int
+    limit:int
+    dishes_max: int max dishes
+    dishes_min: int min dishes 
+    price_max: int max price
+    price_min: int min price
+
+Search for restaurants or dishes by name, ranked by relevance to search term
+not enough time to develop
+
+
+
 
 ```
 
 API document
 
-
-/restaurant
 ```
 OPTIONS /restaurant
 you can use options to get select count
@@ -116,10 +142,19 @@ get price range in menu
 Params:
     offset: int
     limit:int
-    max: int max price
-    min: int min price 
+    price_max: int max price
+    price_min: int min price 
     sort: int 1 is sort by price 2 is sort by name
 
+GET /dishes/amount
+get amount from restaurant dishes amount
+Params:
+    offset: int
+    limit:int
+    dishes_max: int max dishes
+    dishes_min: int min dishes 
+    price_max: int max price
+    price_min: int min price
 
 ```
 
