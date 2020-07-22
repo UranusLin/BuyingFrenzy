@@ -2,6 +2,7 @@ import json
 import logging
 from src import log_init, db_util
 from datetime import datetime
+from dateutil import parser
 import os
 
 weekend = {
@@ -18,13 +19,13 @@ weekend = {
 
 weekend_list = ['Mon', 'Tues', 'Weds', 'Thurs', 'Fri', 'Sat', 'Sun']
 
-def til_days(first_day, end_day, open_time, restaurant_id, insert_data):
+def til_days(first_day, end_day, open_time, restaurant_id, insert_data, open_time_open, open_time_close):
     if int(weekend.get(first_day)) > int(weekend.get(end_day)):
         # for cross week
         count = int(weekend.get(first_day))
         a = []
         while count != int(weekend.get(end_day)) + 1:
-            data = (weekend_list[count - 1], ''.join(open_time).split('-')[0], ''.join(open_time).split('-')[1], str(restaurant_id))
+            data = (weekend_list[count - 1], open_time_open, open_time_close, str(restaurant_id))
             insert_data.append(data)
             a.append(data)
             if count == 7:
@@ -33,7 +34,7 @@ def til_days(first_day, end_day, open_time, restaurant_id, insert_data):
                 count += 1
     else:
         for i in range(int(weekend.get(first_day)), int(weekend.get(end_day)) + 1):
-            data = (str(weekend_list[i - 1]), ''.join(open_time).split('-')[0], ''.join(open_time).split('-')[1], str(restaurant_id))
+            data = (str(weekend_list[i - 1]), open_time_open, open_time_close, str(restaurant_id))
             insert_data.append(data)
 
 def init_db_table(config, conn, log):
@@ -58,7 +59,7 @@ def init_db_restaurant(conn, log):
         statement = '(restaurantname, cashbalance) VALUES (%s, %s) RETURNING id'
         data = (restaurant.get('restaurantName'), str(restaurant.get('cashBalance')))
         cur = db_util.db_insert(conn, 'restaurant', statement, data, log)
-        restaurant_id = cur.fetchone()[0]
+        restaurant_id = int(cur.fetchall()[0].get('id'))
         cur.close()
         menu_list = restaurant.get('menu')
         insert_data = []
@@ -80,10 +81,13 @@ def init_db_restaurant(conn, log):
             day = list(filter(None, day.split(' ')))
             open_time = day[-5:]
             week = day[:-5]
+            open_time_open = parser_time_hh_mm(''.join(open_time).split('-')[0])
+            open_time_close = parser_time_hh_mm(''.join(open_time).split('-')[1])
+
             if len(week) == 1:
                 if weekend.get(week[0]):
                     #  insert one day
-                    data = (str(weekend_list[int(weekend.get(week[0])) - 1]), ''.join(open_time).split('-')[0], ''.join(open_time).split('-')[1], str(restaurant_id))
+                    data = (str(weekend_list[int(weekend.get(week[0])) - 1]), open_time_open, open_time_close, str(restaurant_id))
                     insert_data.append(data)
                 else:
                     # day til day
@@ -91,98 +95,101 @@ def init_db_restaurant(conn, log):
                     first_day = day_list[0]
                     end_day = day_list[1]
                     for i in range(int(weekend.get(first_day)), int(weekend.get(end_day)) + 1):
-                        data = (str(weekend_list[i - 1]), ''.join(open_time).split('-')[0], ''.join(open_time).split('-')[1], str(restaurant_id))
+                        data = (str(weekend_list[i - 1]), open_time_open, open_time_close, str(restaurant_id))
                         insert_data.append(data)
             elif len(week) == 2:
                 if len(week[0].split(',')) == 2:
                     first_day = weekend.get(week[0].split(',')[0])
                     if first_day:
-                        data = (weekend_list[int(first_day) - 1], ''.join(open_time).split('-')[0], ''.join(open_time).split('-')[1], str(restaurant_id))
+                        data = (weekend_list[int(first_day) - 1], open_time_open, open_time_close, str(restaurant_id))
                         insert_data.append(data)
                         if weekend.get(week[1]):
-                            data = (weekend_list[int(weekend.get(week[1])) - 1], ''.join(open_time).split('-')[0], ''.join(open_time).split('-')[1], str(restaurant_id))
+                            data = (weekend_list[int(weekend.get(week[1])) - 1], open_time_open, open_time_close, str(restaurant_id))
                             insert_data.append(data)
                         else:
                             day_list = week[1].split('-')
                             first_day = day_list[0]
                             end_day = day_list[1]
                             for i in range(int(weekend.get(first_day)), int(weekend.get(end_day)) + 1):
-                                data = (str(weekend_list[i - 1]), ''.join(open_time).split('-')[0], ''.join(open_time).split('-')[1], str(restaurant_id))
+                                data = (str(weekend_list[i - 1]), open_time_open, open_time_close, str(restaurant_id))
                                 insert_data.append(data)
                     else:
                         day_list = week[0].split(',')[0].split('-')
                         first_day = day_list[0]
                         end_day = day_list[1]
                         for i in range(int(weekend.get(first_day)), int(weekend.get(end_day)) + 1):
-                            data = (str(weekend_list[i - 1]), ''.join(open_time).split('-')[0], ''.join(open_time).split('-')[1], str(restaurant_id))
+                            data = (str(weekend_list[i - 1]), open_time_open, open_time_close, str(restaurant_id))
                             insert_data.append(data)
-                        data = (weekend_list[int(weekend.get(week[1])) - 1], ''.join(open_time).split('-')[0], ''.join(open_time).split('-')[1], str(restaurant_id))
+                        data = (weekend_list[int(weekend.get(week[1])) - 1], open_time_open, open_time_close, str(restaurant_id))
                         insert_data.append(data)
             elif len(week) == 3:
                 if week[1] == '-':
                     first_day = week[0]
                     end_day = week[2]
-                    til_days(first_day, end_day, open_time, restaurant_id, insert_data)
+                    til_days(first_day, end_day, open_time, restaurant_id, insert_data, open_time_open, open_time_close)
                 else:
                     for we in week:
                         if weekend.get(we.split(',')[0]):
-                            data = (weekend_list[int(weekend.get(we.split(',')[0])) - 1], ''.join(open_time).split('-')[0], ''.join(open_time).split('-')[1], str(restaurant_id))
+                            data = (weekend_list[int(weekend.get(we.split(',')[0])) - 1], open_time_open, open_time_close, str(restaurant_id))
                             insert_data.append(data)
             elif len(week) == 4:
                 if len(week[0].split(',')) == 2:
                     first_day = weekend.get(week[0].split(',')[0])
                     if first_day:
-                        data = (weekend_list[int(first_day) - 1], ''.join(open_time).split('-')[0], ''.join(open_time).split('-')[1], str(restaurant_id))
+                        data = (weekend_list[int(first_day) - 1], open_time_open, open_time_close, str(restaurant_id))
                         insert_data.append(data)
                         first_day = week[1]
                         end_day = week[3]
                         for i in range(int(weekend.get(first_day)), int(weekend.get(end_day)) + 1):
-                            data = (str(weekend_list[i - 1]), ''.join(open_time).split('-')[0], ''.join(open_time).split('-')[1], str(restaurant_id))
+                            data = (str(weekend_list[i - 1]), open_time_open, open_time_close, str(restaurant_id))
                             insert_data.append(data)
                 else:
                     first_day = week[0]
                     end_day = week[2].split(',')[0]
-                    til_days(first_day, end_day, open_time, restaurant_id, insert_data)
+                    til_days(first_day, end_day, open_time, restaurant_id, insert_data, open_time_open, open_time_close)
 
-                    data = (str(weekend_list[int(weekend.get(week[3])) - 1]), ''.join(open_time).split('-')[0], ''.join(open_time).split('-')[1], str(restaurant_id))
+                    data = (str(weekend_list[int(weekend.get(week[3])) - 1]), open_time_open, open_time_close, str(restaurant_id))
                     insert_data.append(data)
             elif len(week) == 5:
                 if week[1] == '-':
                     first_day = week[0]
                     end_day = week[2].split(',')[0]
-                    til_days(first_day, end_day, open_time, restaurant_id, insert_data)
-                    data = (str(weekend_list[int(weekend.get(week[3].split(',')[0])) - 1]), ''.join(open_time).split('-')[0], ''.join(open_time).split('-')[1], str(restaurant_id))
+                    til_days(first_day, end_day, open_time, restaurant_id, insert_data, open_time_open, open_time_close)
+                    data = (str(weekend_list[int(weekend.get(week[3].split(',')[0])) - 1]), open_time_open, open_time_close, str(restaurant_id))
                     insert_data.append(data)
-                    data = (str(weekend_list[int(weekend.get(week[4])) - 1]), ''.join(open_time).split('-')[0], ''.join(open_time).split('-')[1], str(restaurant_id))
+                    data = (str(weekend_list[int(weekend.get(week[4])) - 1]), open_time_open, open_time_close, str(restaurant_id))
                     insert_data.append(data)
                 elif week[2] == '-':
                     first_day = week[1]
                     end_day = week[3].split(',')[0]
-                    til_days(first_day, end_day, open_time, restaurant_id, insert_data)
-                    data = (str(weekend_list[int(weekend.get(week[0].split(',')[0])) - 1]), ''.join(open_time).split('-')[0], ''.join(open_time).split('-')[1],
+                    til_days(first_day, end_day, open_time, restaurant_id, insert_data, open_time_open, open_time_close)
+                    data = (str(weekend_list[int(weekend.get(week[0].split(',')[0])) - 1]), open_time_open, open_time_close,
                             str(restaurant_id))
                     insert_data.append(data)
-                    data = (str(weekend_list[int(weekend.get(week[4])) - 1]), ''.join(open_time).split('-')[0], ''.join(open_time).split('-')[1], str(restaurant_id))
+                    data = (str(weekend_list[int(weekend.get(week[4])) - 1]), open_time_open, open_time_close, str(restaurant_id))
                     insert_data.append(data)
                 else:
                     first_day = week[2]
                     end_day = week[4]
-                    til_days(first_day, end_day, open_time, restaurant_id, insert_data)
-                    data = (str(weekend_list[int(weekend.get(week[0].split(',')[0])) - 1]), ''.join(open_time).split('-')[0], ''.join(open_time).split('-')[1],
+                    til_days(first_day, end_day, open_time, restaurant_id, insert_data, open_time_open, open_time_close)
+                    data = (str(weekend_list[int(weekend.get(week[0].split(',')[0])) - 1]), open_time_open, open_time_close,
                             str(restaurant_id))
                     insert_data.append(data)
-                    data = (str(weekend_list[int(weekend.get(week[1].split(',')[0])) - 1]), ''.join(open_time).split('-')[0], ''.join(open_time).split('-')[1], str(restaurant_id))
+                    data = (str(weekend_list[int(weekend.get(week[1].split(',')[0])) - 1]), open_time_open, open_time_close, str(restaurant_id))
                     insert_data.append(data)
             else:
                 first_day = week[0]
                 end_day = week[2].split(',')[0]
-                til_days(first_day, end_day, open_time, restaurant_id, insert_data)
+                til_days(first_day, end_day, open_time, restaurant_id, insert_data, open_time_open, open_time_close)
                 first_day = week[3]
                 end_day = week[5]
-                til_days(first_day, end_day, open_time, restaurant_id, insert_data)
+                til_days(first_day, end_day, open_time, restaurant_id, insert_data, open_time_open, open_time_close)
         cur.executemany(statement, insert_data)
         cur.close()
         conn.commit()
+
+def parser_time_hh_mm(time):
+    return datetime.strftime(parser.parse(time), '%H:%M')
 
 def init_db_users(conn, log):
     with open("../data/users_with_purchase_history.json", 'r') as load_f:
@@ -192,7 +199,7 @@ def init_db_users(conn, log):
         statement = '(id, name, cashbalance) VALUES (%s, %s, %s) RETURNING id'
         data = (str(user.get('id')), str(user.get('name')), str(user.get('cashBalance')))
         cur = db_util.db_insert(conn, 'users', statement, data, log)
-        user_id = cur.fetchone()[0]
+        user_id = cur.fetchall()[0]
         cur.close()
         purchaseHistory = user.get('purchaseHistory')
         insert_data = []

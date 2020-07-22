@@ -31,6 +31,45 @@ DB model
 
 ![image](https://github.com/UranusLin/BuyingFrenzy/blob/master/db_Architecture.png)
 
+API:
+```
+List all restaurants that are open at a certain datetime
+GET /restaurant
+Params:
+    offset: int
+    limit:int
+    date: certain date ex. 20200720, 2020-07-20, 2020/07/20, 07/20/2020 etc... suppurt
+    time: time ex. 12:00, 14:00, 08:00 PM, 8AM etc... support 
+
+List all restaurants that are open on a day of the week, at a certain time
+Params:
+    offset: int
+    limit:int
+    week: 'Sun', 'Mon', 'Tues', 'Weds', 'Thurs', 'Fri', 'Sat' 
+    time: time ex. 12:00, 14:00, 08:00 PM, 8AM etc... support 
+
+GET /restaurant/hour
+get open time more or less per week or day
+ps. just realize day and have little bug
+Params:
+    offset: int
+    limit:int
+    query_type: more/less
+    date_type: day/week
+    hour: int
+
+List all dishes that are within a price range, sorted by price or alphabetically
+GET /dishes/price
+get price range in menu
+Params:
+    offset: int
+    limit:int
+    max: int max price
+    min: int min price 
+    sort: int 1 is sort by price 2 is sort by name
+
+```
+
 API document
 
 
@@ -49,6 +88,9 @@ to get data by offset and limit to reduce select data for one time
 Params:
     offset: int
     limit:int
+    date: certain date ex. 20200720, 2020-07-20, 2020/07/20, 07/20/2020 etc... suppurt
+    time: time ex. 12:00, 14:00, 08:00 PM, 8AM etc... support 
+    week: 'Sun', 'Mon', 'Tues', 'Weds', 'Thurs', 'Fri', 'Sat' 
 response:
     {
       "data": [
@@ -59,7 +101,35 @@ response:
         }
       ]
     }
+
+GET /restaurant/hour
+get open time more or less per week or day
+Params:
+    offset: int
+    limit:int
+    query_type: more/less
+    date_type: day/week
+    hour: int
+
+GET /dishes/price
+get price range in menu
+Params:
+    offset: int
+    limit:int
+    max: int max price
+    min: int min price 
+    sort: int 1 is sort by price 2 is sort by name
+
+
 ```
 
+ERROR CODE
+````
+Code: depiction
+99 : wrong date
+101: just time no date
+102: two query week and date
+103: wrong params
+````
 
 This project was bootstrapped with [Flask](https://palletsprojects.com/p/flask/).
