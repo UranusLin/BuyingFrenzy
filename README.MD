@@ -32,7 +32,7 @@ DB model
 ![image](https://github.com/UranusLin/BuyingFrenzy/blob/master/db_Architecture.png)
 
 API:
-use [18.138.124.97:5001](18.138.124.97:5001) to test api
+use [18.138.124.97:5001](http://18.138.124.97:5001) to test api
 ```
 List all restaurants that are open at a certain datetime
 GET /restaurant
