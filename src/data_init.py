@@ -199,7 +199,7 @@ def init_db_users(conn, log):
         statement = '(id, name, cashbalance) VALUES (%s, %s, %s) RETURNING id'
         data = (str(user.get('id')), str(user.get('name')), str(user.get('cashBalance')))
         cur = db_util.db_insert(conn, 'users', statement, data, log)
-        user_id = cur.fetchall()[0]
+        user_id = int(cur.fetchall()[0].get('id'))
         cur.close()
         purchaseHistory = user.get('purchaseHistory')
         insert_data = []
@@ -207,15 +207,15 @@ def init_db_users(conn, log):
             statement = ' where restaurantname = %s'
             data = [str(h.get('restaurantName'))]
             cur = db_util.db_query(conn, 'restaurant', statement, log, data)
-            restaurant_id = cur.fetchall()[0][0]
+            restaurant_id = int(cur.fetchall()[0].get('id'))
             cur.close()
             statement = ' where dishname = %s and restaurant_id = %s '
             data = [str(h.get('dishName')), str(restaurant_id)]
             cur = db_util.db_query(conn, 'menu', statement, log, data)
-            menu_id = cur.fetchall()[0][0]
+            menu_id = int(cur.fetchall()[0].get('id'))
             cur.close()
-            transactionDate = datetime.timestamp(datetime.strptime(str(h.get('transactionDate')).strip(), '%m/%d/%Y %H:%M %p'))
-            data = (str(menu_id), str(restaurant_id), str(h.get('transactionAmount')), str(int(transactionDate)), str(user_id))
+            transactionDate = str(h.get('transactionDate').strip())
+            data = (str(menu_id), str(restaurant_id),  str(h.get('transactionAmount')), transactionDate, str(user_id))
             insert_data.append(data)
         statement = ' INSERT INTO purchasehistory (menu_id, restaurant_id, transactionamount, transactiondate, user_id) VALUES (%s, %s, %s, %s, %s)'
         cur = conn.cursor()
