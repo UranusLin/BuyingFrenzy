@@ -23,10 +23,10 @@ def db_query(conn, table_name, statement, log, data):
         return None
 
 # Update
-def db_update(conn, table_name, statement, log):
+def db_update(conn, table_name, statement, log, data):
     try:
         statement = 'UPDATE ' + table_name + ' SET ' + statement
-        return db_execute(conn, statement, log)
+        return db_execute(conn, statement, log, data)
     except:
         log.error("Catch an exception.", exc_info=True)
         return None

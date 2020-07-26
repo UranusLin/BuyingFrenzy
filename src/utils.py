@@ -3,7 +3,7 @@ from dateutil import parser
 from src import db_util
 
 
-def query_db(limit, offset, statement, log, config, query_data):
+def query_db(limit, offset, statement, log, config, query_data=None):
     if limit and offset:
         statement = statement + ' offset ' + offset + ' limit ' + limit
     log.info('statement:' + statement)

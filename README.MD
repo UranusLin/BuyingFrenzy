@@ -94,9 +94,61 @@ Params:
 Search for restaurants or dishes by name, ranked by relevance to search term
 not enough time to develop
 
+The top x users by total transaction amount within a date range
+GET /transaction/report
+get report about transaction by users or transactionamount
+Params:
+    offset: int
+    limit:int
+    type: 1 
+    from_date: certain date ex. 20200720, 2020-07-20, 2020/07/20, 07/20/2020 etc... suppurt
+    from_time: time ex. 12:00, 14:00, 08:00 PM, 8AM etc... support 
+    to_date: certain date ex. 20200720, 2020-07-20, 2020/07/20, 07/20/2020 etc... suppurt
+    to_time: time ex. 12:00, 14:00, 08:00 PM, 8AM etc... support 
 
+The total number and dollar value of transactions that happened 
+GET /transaction/report
+get report about transaction by users or transactionamount
+Params:
+    offset: int
+    limit:int
+    type: 2
+    from_date: certain date ex. 20200720, 2020-07-20, 2020/07/20, 07/20/2020 etc... suppurt
+    from_time: time ex. 12:00, 14:00, 08:00 PM, 8AM etc... support 
+    to_date: certain date ex. 20200720, 2020-07-20, 2020/07/20, 07/20/2020 etc... suppurt
+    to_time: time ex. 12:00, 14:00, 08:00 PM, 8AM etc... support 
 
+Edit restaurant name, dish name, dish price and user name
+PATCH /restaurant/[restaurant.id]
+patch restaurant data, patch restaurant name or dishname & price
+Request:
+    restaurantname: string 
+    dishname: string
+    price: string
+    menu_id: int
 
+PATCH /users/[users.id]
+patch users name
+patch users data
+Request:
+    name: string
+
+The most popular restaurants by transaction volume, either by number of transactions or transaction dollar value
+GET /transaction/rank
+get restaurant rank by transaction volume or  transaction dollar value 
+Params:
+    offset: int
+    limit:int
+    type: int 1 is transaction volume/ 2 is transaction dollar value
+
+Total number of users who made transactions above or below $v within a date range
+
+Process a user purchasing a dish from a restaurant, handling all relevant data changes in an atomic transaction
+POST /transaction/[user.id]/order
+users buy dishes 
+Request:
+    restaurant_id: string
+    dish_id: string
 ```
 
 API document
@@ -156,6 +208,44 @@ Params:
     dishes_min: int min dishes 
     price_max: int max price
     price_min: int min price
+
+GET /transaction/report
+get report about transaction by users or transactionamount
+Params:
+    offset: int
+    limit:int
+    type: int 1 is user/ 2 is amount
+    from_date: certain date ex. 20200720, 2020-07-20, 2020/07/20, 07/20/2020 etc... suppurt
+    from_time: time ex. 12:00, 14:00, 08:00 PM, 8AM etc... support 
+    to_date: certain date ex. 20200720, 2020-07-20, 2020/07/20, 07/20/2020 etc... suppurt
+    to_time: time ex. 12:00, 14:00, 08:00 PM, 8AM etc... support 
+
+PATCH /restaurant/[restaurant.id]
+patch restaurant data
+Request:
+    restaurantname: string
+    dishname: string
+    price: string
+    menu_id: int
+
+PATCH /users/[users.id]
+patch users data
+Request:
+    name: string
+
+GET /transaction/rank
+get restaurant rank by transaction volume or  transaction dollar value 
+Params:
+    offset: int
+    limit:int
+    type: int 1 is transaction volume/ 2 is transaction dollar value 
+
+
+POST /transaction/[user.id]/order
+users buy dishes 
+Request:
+    restaurant_id: string
+    dish_id: string
 
 ```
 

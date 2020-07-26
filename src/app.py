@@ -61,7 +61,7 @@ def get_restaurant():
         date = request.args.get('date', default=None)
         time = request.args.get('time', default=None)
         week = request.args.get('week', default=None)
-
+        log.info(str(request.args))
         if date and week:
             log.error('two query week and date')
             error_msg['code'] = '102'
@@ -127,6 +127,7 @@ def get_restaurant_hour():
         hour = request.args.get('hour', default=None)
         offset = request.args.get('offset', default=None)
         limit = request.args.get('limit', default=None)
+        log.info(str(request.args))
         wrong = False
         if not query_type or not date_type or not hour:
             wrong = True
@@ -186,6 +187,7 @@ def get_dishes_price():
         sort_type = request.args.get('sort_type', default=None)
         offset = request.args.get('offset', default=None)
         limit = request.args.get('limit', default=None)
+        log.info(str(request.args))
         wrong = False
         if not price_max and not price_min:
             wrong = True
@@ -237,6 +239,7 @@ def get_dishes_amount():
         dishes_min = request.args.get('dishes_min', default=None)
         offset = request.args.get('offset', default=None)
         limit = request.args.get('limit', default=None)
+        log.info(str(request.args))
         wrong = False
         if not dishes_max and not dishes_min:
                 wrong = True
@@ -259,7 +262,7 @@ def get_dishes_amount():
         elif price_min:
             query_data = (price_min,)
 
-        statement = statement + ' group by menu.restaurant_id,restaurant.restaurantname   having count(menu.restaurant_id)  '
+        statement = statement + ' group by menu.restaurant_id,restaurant.restaurantname having count(menu.restaurant_id)  '
         if dishes_max and dishes_min:
             statement = statement + ' between %s and %s'
             l = list(query_data)
@@ -287,7 +290,268 @@ def get_dishes_amount():
         if conn:
             conn.close()
 
-#select restaurant.restaurantname, count(restaurant_id) from menu join restaurant on (restaurant.id = menu.restaurant_id)  group by menu.restaurant_id,restaurant.restaurantname   having count(menu.restaurant_id) > 10
+@app.route('/transaction/report', methods=['GET'])
+def get_transaction_report():
+    try:
+        conn = None
+        query_data = None
+        log = logging.getLogger('get_transaction_report')
+        query_type = request.args.get('type', default=None)
+        from_date = request.args.get('from_date', default=None)
+        from_time = request.args.get('from_time', default=None)
+        to_date = request.args.get('to_date', default=None)
+        to_time = request.args.get('to_time', default=None)
+        offset = request.args.get('offset', default=None)
+        limit = request.args.get('limit', default=None)
+        log.info(str(request.args))
+        if from_time and not from_date:
+            log.error('not date just time')
+            error_msg['code'] = '101'
+            error_msg['message'] = 'just time no date'
+            return jsonify({'data': error_msg})
+        if to_time and not to_date:
+            log.error('not date just time')
+            error_msg['code'] = '101'
+            error_msg['message'] = 'just time no date'
+            return jsonify({'data': error_msg})
+        statement = ''
+        if query_type == '1':
+            st = ''
+            statement = 'select users.name, sum(purchasehistory.transactionamount) from purchasehistory join users  on (users.id = purchasehistory.user_id) where '
+            l = []
+            if from_date:
+                st = 'purchasehistory.transactiondate >= %s '
+                l.append(from_date + ' ' + from_time)
+                if to_date:
+                    st = st + ' and purchasehistory.transactiondate <= %s '
+                    l.append(to_date + ' ' + to_time)
+                query_data = tuple(l)
+            elif to_date:
+                st = 'purchasehistory.transactiondate >= %s '
+                query_data = ((to_date + ' ' + to_time), )
+            statement = statement + st + ' group by users.name order by sum DESC '
+            data = query_db(limit, offset, statement, log, config, query_data)
+            log.info('data:' + str(data))
+            return jsonify({'data': data})
+        elif query_type == '2':
+            statement = 'select count(id), sum(transactionamount) from purchasehistory  where '
+            st = ''
+            l = []
+            if from_date:
+                st = 'purchasehistory.transactiondate >= %s '
+                l.append(from_date + ' ' + from_time)
+                if to_date:
+                    st = st + ' and purchasehistory.transactiondate <= %s '
+                    l.append(to_date + ' ' + to_time)
+                query_data = tuple(l)
+            elif to_date:
+                st = 'purchasehistory.transactiondate >= %s '
+                query_data = ((to_date + ' ' + to_time),)
+            statement = statement + st
+            conn = db_util.db_get_conn(app.config, log)
+            if query_data:
+                cur = db_util.db_execute(conn, statement, log, query_data)
+            else:
+                cur = db_util.db_execute(conn, statement, log)
+            rows = list(cur.fetchall())
+            data = []
+            for row in rows:
+                row = dict(row)
+                data.append(row)
+            return jsonify({'data': data[0]})
+
+    except:
+        log.info("Catch an exception.", exc_info=True)
+        return jsonify(error_msg)
+    finally:
+        if conn:
+            conn.close()
+
+@app.route('/restaurant/<id>', methods=['PATCH'])
+def patch_restaurant(id):
+    try:
+        conn = None
+        query_data = None
+        log = logging.getLogger('patch_restaurant')
+        content = request.json
+        log.info('data:' + str(content))
+        # query restaurant by id
+        statement = ' where id = %s'
+        query_data = (int(id),)
+        conn = db_util.db_get_conn(app.config, log)
+        cur = db_util.db_query(conn, 'restaurant', statement, log, query_data)
+        rows = list(cur.fetchall())
+        if rows:
+            # patch
+            if content.get('restaurantname'):
+                statement = ' restaurantname = %s where id = %s '
+                query_data = (content.get('restaurantname'), int(id))
+                db_util.db_update(conn, 'restaurant', statement, log, query_data)
+                conn.commit()
+                statement = ' where id = %s'
+                query_data = (int(id),)
+                cur = db_util.db_query(conn, 'restaurant', statement, log, query_data)
+                rows = list(cur.fetchall())
+                data = dict(rows[0])
+                return jsonify({'data': data})
+            if content.get('dishname') and content.get('price') and content.get('menu_id'):
+                statement = ' dishname = %s , price = %s where restaurant_id = %s and id = %s '
+                query_data = (content.get('dishname'), content.get('price'), int(id), int(content.get('menu_id')))
+                db_util.db_update(conn, 'menu', statement, log, query_data)
+                conn.commit()
+                statement = ' join menu on (menu.restaurant_id = restaurant.id) where restaurant.id = %s'
+                query_data = (int(id),)
+                cur = db_util.db_query(conn, 'restaurant', statement, log, query_data)
+                rows = list(cur.fetchall())
+                data = dict(rows[0])
+                return jsonify({'data': data})
+        log.error('wrong params')
+        error_msg['code'] = '103'
+        error_msg['message'] = 'wrong params'
+        return jsonify({'data': error_msg})
+    except:
+        log.info("Catch an exception.", exc_info=True)
+        return jsonify(error_msg)
+    finally:
+        if conn:
+            conn.close()
+
+@app.route('/users/<id>', methods=['PATCH'])
+def patch_users(id):
+    try:
+        conn = None
+        query_data = None
+        log = logging.getLogger('patch_users')
+        content = request.json
+        log.info('data:' + str(content))
+        # query restaurant by id
+        statement = ' where id = %s'
+        query_data = (int(id),)
+        conn = db_util.db_get_conn(app.config, log)
+        cur = db_util.db_query(conn, 'users', statement, log, query_data)
+        rows = list(cur.fetchall())
+        if rows:
+            # patch
+            if content.get('name'):
+                statement = ' name = %s where id = %s '
+                query_data = (content.get('name'), int(id))
+                db_util.db_update(conn, 'users', statement, log, query_data)
+                conn.commit()
+                statement = ' where id = %s'
+                query_data = (int(id),)
+                cur = db_util.db_query(conn, 'users', statement, log, query_data)
+                rows = list(cur.fetchall())
+                data = dict(rows[0])
+                return jsonify({'data': data})
+        log.error('wrong params')
+        error_msg['code'] = '103'
+        error_msg['message'] = 'wrong params'
+        return jsonify({'data': error_msg})
+    except:
+        log.info("Catch an exception.", exc_info=True)
+        return jsonify(error_msg)
+    finally:
+        if conn:
+            conn.close()
+
+@app.route('/transaction/rank', methods=['GET'])
+def get_transaction_rank():
+    try:
+        conn = None
+        query_data = None
+        log = logging.getLogger('get_transaction_rank')
+        query_type = request.args.get('type', default=None)
+        offset = request.args.get('offset', default=None)
+        limit = request.args.get('limit', default=None)
+        log.info(str(request.args))
+        if query_type != '1' and query_type != '2':
+            log.error('wrong params')
+            error_msg['code'] = '103'
+            error_msg['message'] = 'wrong params'
+            return jsonify({'data': error_msg})
+        statement = ''
+        if query_type == '1':
+            st = ''
+            statement = 'select restaurant.restaurantname ,count(*) from purchasehistory join restaurant on (restaurant.id = purchasehistory.restaurant_id) group by restaurant.restaurantname order by count DESC '
+            data = query_db(limit, offset, statement, log, config)
+            log.info('data:' + str(data))
+            return jsonify({'data': data})
+        elif query_type == '2':
+            statement = 'select restaurant.restaurantname ,sum(purchasehistory.transactionamount) from purchasehistory join restaurant on (restaurant.id = purchasehistory.restaurant_id) group by restaurant.restaurantname order by sum DESC '
+            data = query_db(limit, offset, statement, log, config)
+            log.info('data:' + str(data))
+            return jsonify({'data': data})
+
+    except:
+        log.info("Catch an exception.", exc_info=True)
+        return jsonify(error_msg)
+    finally:
+        if conn:
+            conn.close()
+
+@app.route('/transaction/<user_id>/order', methods=['POST'])
+def post_transaction_order(user_id):
+    try:
+        conn = None
+        query_data = None
+        log = logging.getLogger('post_transaction_order')
+        content = request.json
+        log.info(str(content))
+
+        # query restaurant by id
+        statement = ' join menu on (menu.restaurant_id = restaurant.id) where menu.id = %s and restaurant.id = %s'
+        query_data = (int(content.get('dish_id')), int(content.get('restaurant_id')))
+        conn = db_util.db_get_conn(app.config, log)
+        cur = db_util.db_query(conn, 'restaurant', statement, log, query_data)
+        rows = list(cur.fetchall())
+        row = dict(rows[0])
+
+        # query users by id
+        statement = '  where id = %s '
+        query_data = (int(user_id), )
+        conn = db_util.db_get_conn(app.config, log)
+        cur = db_util.db_query(conn, 'users', statement, log, query_data)
+        rows = list(cur.fetchall())
+        users = dict(rows[0])
+        if row and users:
+            #  update restaurant cashbalance
+            new_cash = row.get('cashbalance') + row.get('price')
+            statement = ' cashbalance = %s where id = %s '
+            query_data = (new_cash, int(content.get('restaurant_id')))
+            db_util.db_update(conn, 'restaurant', statement, log, query_data)
+            conn.commit()
+            #  update users cashbalance
+            new_cash = users.get('cashbalance') - row.get('price')
+            statement = ' cashbalance = %s where id = %s '
+            query_data = (new_cash, int(user_id))
+            db_util.db_update(conn, 'users', statement, log, query_data)
+            conn.commit()
+            #  insert purchasehistory
+            statement = '(menu_id, restaurant_id, transactionamount, transactiondate, user_id) VALUES (%s, %s, %s, %s, %s) RETURNING id'
+            data = (int(content.get('dish_id')), int(content.get('restaurant_id')), row.get('price'), datetime.utcnow(), int(user_id))
+            cur = db_util.db_insert(conn, 'purchasehistory', statement, data, log)
+            p_id = int(cur.fetchall()[0].get('id'))
+            cur.close()
+
+            # query purchasehistory by id
+            statement = '  where id = %s '
+            query_data = (int(p_id),)
+            conn = db_util.db_get_conn(app.config, log)
+            cur = db_util.db_query(conn, 'purchasehistory', statement, log, query_data)
+            rows = list(cur.fetchall())
+            p = dict(rows[0])
+            return jsonify({'data': p})
+        log.error('wrong params')
+        error_msg['code'] = '103'
+        error_msg['message'] = 'wrong params'
+        return jsonify({'data': error_msg})
+
+    except:
+        log.info("Catch an exception.", exc_info=True)
+        return jsonify(error_msg)
+    finally:
+        if conn:
+            conn.close()
 
 if __name__ == '__main__':
         # get all route endpoints
