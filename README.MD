@@ -10,20 +10,30 @@ You need the following tools installed:
 
 ### Install Dependencies
 
+install docker postgreSQL
+````
+docker run --name glints-db -e POSTGRES_PASSWORD=passw0rd -p 5432:5432 -d postgres
+````
+
+you can change setting in config
+
 Use the command to install dependencies.
 
 ```
 $ pip install requirements.txt
 ```
 
+initial data
+````
+python data_init.py
+````
+
 ### `python app.py`
 
 Runs the API server in the development mode.<br>
-call API in  [http://localhost:5000](http://localhost:5000)
+call API in  [http://localhost:5001](http://localhost:5001)
+or you can change port in config
 
-### `Docker build`
-
-Builds [docker](https://www.docker.com) images and run in [docker-compose](https://docs.docker.com/compose/)
 
 ## Further Reference
 
@@ -92,7 +102,7 @@ Params:
     price_min: int min price
 
 Search for restaurants or dishes by name, ranked by relevance to search term
-not enough time to develop
+Not done
 
 The top x users by total transaction amount within a date range
 GET /transaction/report
@@ -142,6 +152,7 @@ Params:
     type: int 1 is transaction volume/ 2 is transaction dollar value
 
 Total number of users who made transactions above or below $v within a date range
+Not done
 
 Process a user purchasing a dish from a restaurant, handling all relevant data changes in an atomic transaction
 POST /transaction/[user.id]/order
