@@ -76,9 +76,9 @@ def get_restaurant():
         statement = 'select * from restaurant '
         if date:
             try:
-                week = datetime.strftime(parser.parse(date), '%w')
+                week1 = datetime.strftime(parser.parse(date), '%w')
                 statement = statement + ' JOIN openhours ON (restaurant.id = openhours.restaurant_id) where openhours.week = %s '
-                query_data = (weekend_list[int(week)],)
+                query_data = (weekend_list[int(week1)],)
                 if time:
                     time = datetime.strftime(parser.parse(time), '%H%M')
                     statement = statement + ' and open <= %s'
